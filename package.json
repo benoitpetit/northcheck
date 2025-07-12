@@ -1,6 +1,6 @@
 {
   "name": "northcheck",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "CLI tool to check links and files for potential threats using NordVPN APIs.",
   "main": "index.js",
   "bin": {

@@ -1,6 +1,13 @@
-# NorthCheck CLI
+# NorthCheck
 
-A CLI tool to check links and files for potential threats using NordVPN APIs.
+<div align="center">
+  <img src="./logo.png" alt="NorthCheck Logo" width="200" />
+  <br />
+  <span>
+    A CLI tool to check links and files for <br>potential threats using NordVPN APIs.
+  </span>
+</div>
+
 
 ## Installation
 
@@ -245,18 +252,6 @@ NorthCheck is fully compatible with:
 ## License
 
 MIT
-
-## Contributing
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## Issues
-
-If you encounter any issues, please report them on the [GitHub issues page](https://github.com/benoitpetit/northcheck/issues).
 
 ---
 
