@@ -178,10 +178,10 @@ jobs:
         
     - name: Create Release
       if: steps.compare.outputs.should_publish == 'true'
-      uses: actions/create-release@v1
+      uses: softprops/action-gh-release@v1
       with:
         tag_name: v${{ steps.package-version.outputs.version }}
-        release_name: Release v${{ steps.package-version.outputs.version }}
+        name: Release v${{ steps.package-version.outputs.version }}
         body: |
           ## What's Changed
           
@@ -202,6 +202,8 @@ jobs:
           *This release was automatically created by GitHub Actions*
         draft: false
         prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         
     - name: Security audit log
       if: always()
