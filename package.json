@@ -1,0 +1,53 @@
+{
+  "name": "northcheck",
+  "version": "0.0.1",
+  "description": "CLI tool to check links and files for potential threats using NordVPN APIs.",
+  "main": "index.js",
+  "bin": {
+    "northcheck": "./index.js",
+    "nc": "./index.js"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "postinstall": "node scripts/postinstall.js"
+  },
+  "keywords": [
+    "cli",
+    "nordvpn",
+    "vpn",
+    "link-checker",
+    "network",
+    "security",
+    "api",
+    "threat-detection",
+    "file-checker"
+  ],
+  "author": {
+    "name": "devbyben",
+    "email": "your.email@example.com",
+    "url": "https://github.com/benoitpetit"
+  },
+  "license": "MIT",
+  "type": "commonjs",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/benoitpetit/northcheck.git"
+  },
+  "homepage": "https://github.com/benoitpetit/northcheck#readme",
+  "bugs": {
+    "url": "https://github.com/benoitpetit/northcheck/issues"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "files": [
+    "index.js",
+    "scripts/",
+    "README.md",
+    "LICENSE"
+  ],
+  "dependencies": {
+    "axios": "^1.10.0",
+    "commander": "^14.0.0"
+  }
+}
