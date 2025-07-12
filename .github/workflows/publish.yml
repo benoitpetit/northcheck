@@ -76,6 +76,8 @@ jobs:
       with:
         node-version: '18'
         registry-url: 'https://registry.npmjs.org'
+      env:
+        NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         
     - name: Install dependencies
       run: npm install
@@ -153,7 +155,7 @@ jobs:
         fi
         
         # Test NPM token by trying to get user info
-        npm whoami --registry=https://registry.npmjs.org/ || {
+        npm whoami || {
           echo "❌ NPM token is invalid or expired"
           exit 1
         }
@@ -166,8 +168,6 @@ jobs:
         echo "🚀 Publishing version ${{ steps.package-version.outputs.version }} to npm..."
         npm publish
         echo "✅ Successfully published to npm"
-      env:
-        NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         
     - name: Skip publish
       if: steps.compare.outputs.should_publish == 'false'
