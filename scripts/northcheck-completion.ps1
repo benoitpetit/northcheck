@@ -14,7 +14,7 @@ Register-ArgumentCompleter -Native -CommandName northcheck -ScriptBlock {
     
     if ($words.Length -eq 0) {
         # No subcommand yet, suggest subcommands
-        $completions = @('link', 'file', '--help', '--version')
+        $completions = @('link', 'file', 'hash', '--help', '--version')
     } elseif ($words.Length -eq 1) {
         $subcommand = $words[0]
         
@@ -24,6 +24,9 @@ Register-ArgumentCompleter -Native -CommandName northcheck -ScriptBlock {
         } elseif ($subcommand -eq 'file') {
             # For file command, suggest files in current directory
             $completions = Get-ChildItem -Name | Where-Object { $_ -like "*$wordToComplete*" }
+        } elseif ($subcommand -eq 'hash') {
+            # For hash command, no specific suggestions
+            $completions = @()
         } elseif ($subcommand -like '--*') {
             # For options, suggest common options
             $completions = @('--json', '--help')
@@ -35,8 +38,21 @@ Register-ArgumentCompleter -Native -CommandName northcheck -ScriptBlock {
             # For link command with URL, suggest --json option
             $completions = @('--json')
         } elseif ($subcommand -eq 'file') {
-            # For file command with file path, suggest --json option
-            $completions = @('--json')
+            # For file command with file path, suggest options
+            $completions = @('--json', '--hash', '--size', '--name')
+        } elseif ($subcommand -eq 'hash') {
+            # For hash command with hash, suggest options
+            $completions = @('--json', '--size', '--name')
+        }
+    } elseif ($words.Length -eq 3) {
+        $subcommand = $words[0]
+        
+        if ($subcommand -eq 'file' -and $words[1] -like '--*') {
+            # For file command with option, suggest other options
+            $completions = @('--json', '--hash', '--size', '--name') | Where-Object { $_ -ne $words[1] }
+        } elseif ($subcommand -eq 'hash' -and $words[1] -like '--*') {
+            # For hash command with option, suggest other options
+            $completions = @('--json', '--size', '--name') | Where-Object { $_ -ne $words[1] }
         }
     }
     
@@ -60,7 +76,7 @@ Register-ArgumentCompleter -Native -CommandName nc -ScriptBlock {
     
     if ($words.Length -eq 0) {
         # No subcommand yet, suggest subcommands
-        $completions = @('link', 'file', '--help', '--version')
+        $completions = @('link', 'file', 'hash', '--help', '--version')
     } elseif ($words.Length -eq 1) {
         $subcommand = $words[0]
         
@@ -70,6 +86,9 @@ Register-ArgumentCompleter -Native -CommandName nc -ScriptBlock {
         } elseif ($subcommand -eq 'file') {
             # For file command, suggest files in current directory
             $completions = Get-ChildItem -Name | Where-Object { $_ -like "*$wordToComplete*" }
+        } elseif ($subcommand -eq 'hash') {
+            # For hash command, no specific suggestions
+            $completions = @()
         } elseif ($subcommand -like '--*') {
             # For options, suggest common options
             $completions = @('--json', '--help')
@@ -81,8 +100,21 @@ Register-ArgumentCompleter -Native -CommandName nc -ScriptBlock {
             # For link command with URL, suggest --json option
             $completions = @('--json')
         } elseif ($subcommand -eq 'file') {
-            # For file command with file path, suggest --json option
-            $completions = @('--json')
+            # For file command with file path, suggest options
+            $completions = @('--json', '--hash', '--size', '--name')
+        } elseif ($subcommand -eq 'hash') {
+            # For hash command with hash, suggest options
+            $completions = @('--json', '--size', '--name')
+        }
+    } elseif ($words.Length -eq 3) {
+        $subcommand = $words[0]
+        
+        if ($subcommand -eq 'file' -and $words[1] -like '--*') {
+            # For file command with option, suggest other options
+            $completions = @('--json', '--hash', '--size', '--name') | Where-Object { $_ -ne $words[1] }
+        } elseif ($subcommand -eq 'hash' -and $words[1] -like '--*') {
+            # For hash command with option, suggest other options
+            $completions = @('--json', '--size', '--name') | Where-Object { $_ -ne $words[1] }
         }
     }
     

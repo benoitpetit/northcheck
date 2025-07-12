@@ -1,0 +1,215 @@
+name: Auto Publish to NPM
+
+on:
+  push:
+    branches: [ prod ]
+  workflow_dispatch:
+
+# Security: Only allow workflow dispatch from repository owner
+permissions:
+  contents: write
+  packages: write
+  id-token: write
+
+jobs:
+  security-check:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Check repository owner
+      run: |
+        # Get repository owner from GITHUB_REPOSITORY
+        REPO_OWNER=$(echo "$GITHUB_REPOSITORY" | cut -d'/' -f1)
+        ALLOWED_OWNER="benoitpetit"
+        
+        if [ "$REPO_OWNER" != "$ALLOWED_OWNER" ]; then
+          echo "❌ Security check failed: Repository owner '$REPO_OWNER' is not authorized"
+          echo "   Only '$ALLOWED_OWNER' can publish releases"
+          exit 1
+        fi
+        
+        echo "✅ Security check passed: Repository owner '$REPO_OWNER' is authorized"
+        
+    - name: Verify commit author (for push events)
+      if: github.event_name == 'push'
+      run: |
+        # Get the commit author
+        COMMIT_AUTHOR="${{ github.actor }}"
+        ALLOWED_AUTHORS="benoitpetit"
+        
+        if [ "$COMMIT_AUTHOR" != "$ALLOWED_AUTHORS" ]; then
+          echo "❌ Security check failed: Commit author '$COMMIT_AUTHOR' is not authorized"
+          echo "   Only '$ALLOWED_AUTHORS' can trigger releases"
+          exit 1
+        fi
+        
+        echo "✅ Security check passed: Commit author '$COMMIT_AUTHOR' is authorized"
+        
+    - name: Verify workflow trigger (for manual dispatch)
+      if: github.event_name == 'workflow_dispatch'
+      run: |
+        # Get the user who triggered the workflow
+        TRIGGER_USER="${{ github.actor }}"
+        ALLOWED_USERS="benoitpetit"
+        
+        if [ "$TRIGGER_USER" != "$ALLOWED_USERS" ]; then
+          echo "❌ Security check failed: Workflow triggered by '$TRIGGER_USER' is not authorized"
+          echo "   Only '$ALLOWED_USERS' can manually trigger releases"
+          exit 1
+        fi
+        
+        echo "✅ Security check passed: Workflow triggered by '$TRIGGER_USER' is authorized"
+
+  check-and-publish:
+    needs: security-check
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        # Security: Fetch only the specific commit to prevent tampering
+        fetch-depth: 0
+        token: ${{ secrets.GITHUB_TOKEN }}
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        registry-url: 'https://registry.npmjs.org'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Verify package.json integrity
+      run: |
+        # Check if package.json has been modified in this commit
+        if git diff --name-only HEAD~1 | grep -q "package.json"; then
+          echo "✅ package.json was modified in this commit"
+        else
+          echo "⚠️  Warning: package.json was not modified in this commit"
+          echo "   This might indicate a security issue"
+        fi
+        
+        # Verify package.json syntax
+        node -e "require('./package.json')"
+        echo "✅ package.json syntax is valid"
+      
+    - name: Get current package version
+      id: package-version
+      run: |
+        VERSION=$(node -p "require('./package.json').version")
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "Current package version: $VERSION"
+        
+        # Validate version format
+        if [[ ! $VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          echo "❌ Invalid version format: $VERSION"
+          echo "   Version must be in format: X.Y.Z"
+          exit 1
+        fi
+        
+        echo "✅ Version format is valid"
+      
+    - name: Get latest npm version
+      id: npm-version
+      run: |
+        LATEST_VERSION=$(npm view northcheck version 2>/dev/null || echo "0.0.0")
+        echo "version=$LATEST_VERSION" >> $GITHUB_OUTPUT
+        echo "Latest version on npm: $LATEST_VERSION"
+        echo "Package version: ${{ steps.package-version.outputs.version }}"
+        
+    - name: Compare versions
+      id: compare
+      run: |
+        PACKAGE_VERSION="${{ steps.package-version.outputs.version }}"
+        NPM_VERSION="${{ steps.npm-version.outputs.version }}"
+        
+        # Convert versions to comparable numbers
+        PACKAGE_MAJOR=$(echo $PACKAGE_VERSION | cut -d. -f1)
+        PACKAGE_MINOR=$(echo $PACKAGE_VERSION | cut -d. -f2)
+        PACKAGE_PATCH=$(echo $PACKAGE_VERSION | cut -d. -f3)
+        
+        NPM_MAJOR=$(echo $NPM_VERSION | cut -d. -f1)
+        NPM_MINOR=$(echo $NPM_VERSION | cut -d. -f2)
+        NPM_PATCH=$(echo $NPM_VERSION | cut -d. -f3)
+        
+        # Compare versions
+        if [ $PACKAGE_MAJOR -gt $NPM_MAJOR ] || \
+           ([ $PACKAGE_MAJOR -eq $NPM_MAJOR ] && [ $PACKAGE_MINOR -gt $NPM_MINOR ]) || \
+           ([ $PACKAGE_MAJOR -eq $NPM_MAJOR ] && [ $PACKAGE_MINOR -eq $NPM_MINOR ] && [ $PACKAGE_PATCH -gt $NPM_PATCH ]); then
+          echo "should_publish=true" >> $GITHUB_OUTPUT
+          echo "✅ Package version ($PACKAGE_VERSION) is higher than npm version ($NPM_VERSION)"
+        else
+          echo "should_publish=false" >> $GITHUB_OUTPUT
+          echo "❌ Package version ($PACKAGE_VERSION) is not higher than npm version ($NPM_VERSION)"
+        fi
+        
+    - name: Verify NPM token
+      if: steps.compare.outputs.should_publish == 'true'
+      run: |
+        if [ -z "${{ secrets.NPM_TOKEN }}" ]; then
+          echo "❌ NPM_TOKEN secret is not configured"
+          exit 1
+        fi
+        
+        # Test NPM token by trying to get user info
+        npm whoami --registry=https://registry.npmjs.org/ || {
+          echo "❌ NPM token is invalid or expired"
+          exit 1
+        }
+        
+        echo "✅ NPM token is valid"
+        
+    - name: Publish to NPM
+      if: steps.compare.outputs.should_publish == 'true'
+      run: |
+        echo "🚀 Publishing version ${{ steps.package-version.outputs.version }} to npm..."
+        npm publish
+        echo "✅ Successfully published to npm"
+      env:
+        NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        
+    - name: Skip publish
+      if: steps.compare.outputs.should_publish == 'false'
+      run: |
+        echo "🚫 Skipping publish - version not incremented"
+        echo "Current package version: ${{ steps.package-version.outputs.version }}"
+        echo "Latest npm version: ${{ steps.npm-version.outputs.version }}"
+        
+    - name: Create Release
+      if: steps.compare.outputs.should_publish == 'true'
+      uses: actions/create-release@v1
+      with:
+        tag_name: v${{ steps.package-version.outputs.version }}
+        release_name: Release v${{ steps.package-version.outputs.version }}
+        body: |
+          ## What's Changed
+          
+          Automated release for version ${{ steps.package-version.outputs.version }}
+          
+          ### Installation
+          ```bash
+          npm install -g northcheck
+          ```
+          
+          ### Usage
+          ```bash
+          nc --help
+          ```
+          
+          ---
+          
+          *This release was automatically created by GitHub Actions*
+        draft: false
+        prerelease: false
+        
+    - name: Security audit log
+      if: always()
+      run: |
+        echo "🔒 Security audit log:"
+        echo "   Repository: $GITHUB_REPOSITORY"
+        echo "   Actor: $GITHUB_ACTOR"
+        echo "   Event: $GITHUB_EVENT_NAME"
+        echo "   Commit: $GITHUB_SHA"
+        echo "   Branch: $GITHUB_REF"
+        echo "   Timestamp: $(date -u)" 

@@ -1,0 +1,27 @@
+# Global code owners - only the repository owner can approve changes
+* @benoitpetit
+
+# Critical package files - require owner approval
+package.json @benoitpetit
+index.js @benoitpetit
+README.md @benoitpetit
+LICENSE @benoitpetit
+
+# GitHub Actions and security files
+.github/ @benoitpetit
+.github/workflows/ @benoitpetit
+.github/CODEOWNERS @benoitpetit
+
+# Scripts and configuration
+scripts/ @benoitpetit
+scripts/postinstall.js @benoitpetit
+scripts/northcheck-completion.bash @benoitpetit
+scripts/northcheck-completion.ps1 @benoitpetit
+
+# Documentation
+docs/ @benoitpetit
+*.md @benoitpetit
+
+# Security and configuration files
+.gitignore @benoitpetit
+.npmignore @benoitpetit 

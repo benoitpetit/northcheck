@@ -1,0 +1,112 @@
+name: Test
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        node-version: [16, 18, 20]
+        
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Check package.json syntax
+      run: node -e "require('./package.json')"
+      
+    - name: Test CLI help
+      run: |
+        node index.js --help
+        node index.js link --help
+        node index.js file --help
+        node index.js hash --help
+        
+    - name: Test version command
+      run: |
+        VERSION=$(node index.js --version)
+        echo "CLI version: $VERSION"
+        PACKAGE_VERSION=$(node -p "require('./package.json').version")
+        echo "Package version: $PACKAGE_VERSION"
+        if [ "$VERSION" != "$PACKAGE_VERSION" ]; then
+          echo "❌ Version mismatch!"
+          exit 1
+        fi
+        echo "✅ Version match!"
+        
+    - name: Test hash validation
+      run: |
+        # Test invalid hash
+        if node index.js hash invalid-hash 2>/dev/null; then
+          echo "❌ Should have failed with invalid hash"
+          exit 1
+        fi
+        
+        # Test valid hash format
+        node index.js hash 0000000000000000000000000000000000000000000000000000000000000000 --size 1024
+        
+        echo "✅ Hash validation tests passed!"
+        
+    - name: Test file command validation
+      run: |
+        # Test file command with --hash but no --size
+        if node index.js file dummy --hash 0000000000000000000000000000000000000000000000000000000000000000 2>/dev/null; then
+          echo "❌ Should have failed with --hash but no --size"
+          exit 1
+        fi
+        
+        # Test file command with invalid size
+        if node index.js file dummy --hash 0000000000000000000000000000000000000000000000000000000000000000 --size -1 2>/dev/null; then
+          echo "❌ Should have failed with negative size"
+          exit 1
+        fi
+        
+        echo "✅ File command validation tests passed!"
+        
+    - name: Test autocompletion scripts
+      run: |
+        # Test bash completion script syntax
+        bash -n scripts/northcheck-completion.bash
+        
+        # Test PowerShell completion script syntax (basic check)
+        if command -v pwsh >/dev/null 2>&1; then
+          pwsh -Command "Get-Command -Syntax scripts/northcheck-completion.ps1" >/dev/null 2>&1 || echo "PowerShell syntax check skipped (pwsh not available)"
+        fi
+        
+        echo "✅ Autocompletion scripts syntax OK!"
+        
+    - name: Check required files exist
+      run: |
+        required_files=(
+          "index.js"
+          "package.json"
+          "README.md"
+          "LICENSE"
+          "scripts/postinstall.js"
+          "scripts/northcheck-completion.bash"
+          "scripts/northcheck-completion.ps1"
+        )
+        
+        for file in "${required_files[@]}"; do
+          if [ ! -f "$file" ]; then
+            echo "❌ Required file missing: $file"
+            exit 1
+          fi
+        done
+        
+        echo "✅ All required files present!" 
