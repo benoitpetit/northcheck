@@ -25,7 +25,7 @@ jobs:
         node-version: ${{ matrix.node-version }}
         
     - name: Install dependencies
-      run: npm ci
+      run: npm install
       
     - name: Check package.json syntax
       run: node -e "require('./package.json')"
