@@ -1,4 +1,4 @@
-# NorthCheck
+# NorthCheck CLI
 
 A CLI tool to check links and files for potential threats using NordVPN APIs.
 
